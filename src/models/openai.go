@@ -22,8 +22,34 @@ func NewOpenAILLM(model string, promptPrefix string) *OpenAILLM {
 	if apiKey == "" {
 		apiKey = os.Getenv("OPENAI_KEY") // fallback
 	}
-	client := openai.NewClient(apiKey)
+
+	// 支持自定义 BaseURL（从环境变量）
+	config := openai.DefaultConfig(apiKey)
+	if baseURL := os.Getenv("OPENAI_BASE_URL"); baseURL != "" {
+		config.BaseURL = baseURL
+	}
+
+	client := openai.NewClientWithConfig(config)
 	return &OpenAILLM{Client: client, Model: model, PromptPrefix: promptPrefix}
+}
+
+// NewOpenAILLMWithBaseURL 创建带自定义 BaseURL 的 OpenAI LLM（用于私有部署）
+func NewOpenAILLMWithBaseURL(model string, promptPrefix string, baseURL string) (*OpenAILLM, error) {
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		apiKey = os.Getenv("OPENAI_KEY") // fallback
+	}
+	if apiKey == "" {
+		return nil, errors.New("OPENAI_API_KEY 或 OPENAI_KEY 环境变量未设置")
+	}
+
+	config := openai.DefaultConfig(apiKey)
+	if baseURL != "" {
+		config.BaseURL = baseURL
+	}
+
+	client := openai.NewClientWithConfig(config)
+	return &OpenAILLM{Client: client, Model: model, PromptPrefix: promptPrefix}, nil
 }
 
 func (o *OpenAILLM) Generate(ctx context.Context, prompt string) (any, error) {
